@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 
 namespace StreamingVideos
 {
@@ -6,7 +7,15 @@ namespace StreamingVideos
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Streaming Videos!");
+            string basePath = "C:\\Programming\\BachelorThesis_StreamingVideos\\StreamingVideos\\dataset\\";
+
+            Parser dataParser = new Parser(basePath + args[0]);
+
+            StreamingVideo sv = new StreamingVideo();
+
+            dataParser.ParseData(sv);
+
+            sv.Compute();
         }
     }
 }

@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "StreamingVideos": {
+      "commandName": "Project",
+      "commandLineArgs": "example.in",
+      "environmentVariables": {
+        "Key": "Value",
+        "BasePath": "C:\\\\Programming\\\\BachelorThesis_StreamingVideos\\\\StreamingVideos\\\\dataset\\\\"
+      }
+    }
+  }
+}
