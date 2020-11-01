@@ -1,11 +1,9 @@
-![](resources/hashcode2017\_qualification\_task.001.png)
-
-Streaming   videos
+**Streaming   videos**
 
 Problem   statement   for   Online   Qualification   Round,   Hash   Code   2017
 
 
-Introduction
+**Introduction**
 
 Have you ever wondered what happens behind the scenes when you watch a YouTube video? As more and  more  people  watch  online  videos  (and  as  the  size  of  these  videos  increases),  it  is  critical  that video-serving   infrastructure   is   optimized   to   handle   requests   reliably   and   quickly. 
 
@@ -13,7 +11,7 @@ This typically involves putting in place cache servers, which store copies of po
 
 But   how   should   you   decide   which   videos   to   put   in   which   cache   servers? 
 
-##Task
+**Task**
 
 Given a description of cache servers, network endpoints and videos, along with predicted requests for individual videos,  **decide which videos to put in which cache server** in order to minimize the average waiting   time   for   all   requests. 
 
