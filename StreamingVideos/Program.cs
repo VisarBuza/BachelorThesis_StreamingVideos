@@ -7,10 +7,10 @@ namespace StreamingVideos
     {
         static void Main(string[] args)
         {
-            string basePath = "C:\\Programming\\BachelorThesis_StreamingVideos\\StreamingVideos\\dataset\\";
+            string basePath = Environment.GetEnvironmentVariable("BasePath");
+            string dataset = args[0].Trim();
 
-            Parser dataParser = new Parser(basePath + args[0]);
-
+            Parser dataParser = new Parser(basePath + dataset);
             StreamingVideo sv = new StreamingVideo();
 
             dataParser.ParseData(sv);

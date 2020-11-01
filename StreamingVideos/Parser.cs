@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
-using StreamingVideos.Models;
 
 namespace StreamingVideos
-{
+    {
     class Parser
     {
-        private string _file;
+        private readonly string _file;
 
         public Parser(string file) => _file = file;
 
