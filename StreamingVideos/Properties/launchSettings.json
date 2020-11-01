@@ -2,7 +2,7 @@
   "profiles": {
     "StreamingVideos": {
       "commandName": "Project",
-      "commandLineArgs": "example.in",
+      "commandLineArgs": "trending_today.in",
       "environmentVariables": {
         "Key": "Value",
         "BasePath": "C:\\Programming\\BachelorThesis_StreamingVideos\\StreamingVideos\\dataset\\"
