@@ -1,11 +1,11 @@
 ![](resources/hashcode2017\_qualification\_task.001.png)
 
-Streaming   videos
+#Streaming   videos
 
 Problem   statement   for   Online   Qualification   Round,   Hash   Code   2017
 
 
-Introduction
+##Introduction
 
 Have you ever wondered what happens behind the scenes when you watch a YouTube video? As more and  more  people  watch  online  videos  (and  as  the  size  of  these  videos  increases),  it  is  critical  that video-serving   infrastructure   is   optimized   to   handle   requests   reliably   and   quickly. 
 
@@ -13,7 +13,7 @@ This typically involves putting in place cache servers, which store copies of po
 
 But   how   should   you   decide   which   videos   to   put   in   which   cache   servers? 
 
-Task
+##Task
 
 Given a description of cache servers, network endpoints and videos, along with predicted requests for individual videos,  **decide which videos to put in which cache server** in order to minimize the average waiting   time   for   all   requests. 
 
@@ -133,7 +133,6 @@ serving a video to the endpoint ***R***   ***e***  from the data center, and *L*
 
 ***v***
 
-![](resources/hashcode2017\_qualification\_task.004.png) ©   Google   2017,   All   rights   reserved. PAGE5 
 
 The time that was saved for each request is *L* − *L* (This is the time it would take to stream the video from
 
@@ -177,6 +176,3 @@ The   average   time   saved   is:
 which   equals   462.5ms.   Multiplied   by   1000,   this   gives   the   score   of  **462**     **500** . 
 
 **Note that there are multiple data sets representing separate instances of the problem. The final score for your team   will   be   the   sum   of   your   best   scores   on   the   individual   data   sets.** 
-
-![](resources/hashcode2017\_qualification\_task.007.png) ©   Google   2017,   All   rights   reserved. 
-PAGE7 
