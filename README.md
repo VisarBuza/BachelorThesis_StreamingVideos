@@ -135,7 +135,7 @@ serving a video to the endpoint ***R***   ***e***  from the data center, and *L*
 
 ![](resources/hashcode2017\_qualification\_task.004.png) ©   Google   2017,   All   rights   reserved. PAGE5 
 
-The time that was saved for each request is *L* − *L* (This is the time it would take to stream the video from![](resources/hashcode2017\_qualification\_task.005.png)
+The time that was saved for each request is *L* − *L* (This is the time it would take to stream the video from
 
 *D*
 
@@ -170,9 +170,9 @@ There   is   also   one   request   description   for   the   endpoint   1:
 
 The   average   time   saved   is: 
 
-![](resources/hashcode2017\_qualification\_task.007.png) ©   Google   2017,   All   rights   reserved. 
 
-(1500 ·700 + 500 ·0 + 1000 ·800 + 1000 ·0)/(1500 + 500 + 1000 + 1000)![](resources/hashcode2017\_qualification\_task.008.png)
+(1500 ·700 + 500 ·0 + 1000 ·800 + 1000 ·0)/(1500 + 500 + 1000 + 1000)
+
 
 which   equals   462.5ms.   Multiplied   by   1000,   this   gives   the   score   of  **462**     **500** . 
 
