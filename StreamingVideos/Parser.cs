@@ -7,54 +7,41 @@ using System.Linq;
 
 namespace StreamingVideos
     {
-    class Parser
+    public class Parser
     {
         private readonly string _file;
-        private readonly StreamingVideo _sv;
+        private readonly StreamingVideoService _streamingVideoServiceService;
 
-        public Parser(string file, StreamingVideo sv)
+        public Parser(string file, StreamingVideoService streamingVideoServiceService)
         {
             _file = file;
-            _sv = sv;
+            _streamingVideoServiceService = streamingVideoServiceService;
         }
-
-
+        
         public void ParseData()
         {
             Console.WriteLine("Parsing the data\n");
 
-            using StreamReader sr = new StreamReader(_file);
-            int index = 0;
-            string line;
+            using var sr = new StreamReader(_file);
+            
+            var line = sr.ReadLine();
+            _streamingVideoServiceService.Init(line.Split());
 
-            while ((line = sr.ReadLine()) != null)
-            {
-                if (index == 0)
-                {
-                    _sv.Init(line.Split());
-                    _sv.InitCacheServers();
-                }
-                else
-                {
-                    _sv.InitVideos(line.Split());
-                    break;
-                }
+            line = sr.ReadLine();
+            _streamingVideoServiceService.InitVideos(line.Split());
 
-                index++;
-            }
-
-            for (int i = 0; i < _sv.NumberOfEndpoints; i++)
+            for (var i = 0; i < _streamingVideoServiceService.NumberOfEndpoints; i++)
             {
                 line = sr.ReadLine();
 
-                var endpoint = new Endpoint()
+                var endpoint = new Endpoint
                 {
                     Id = i,
                     LatencyToDataCenter = Convert.ToInt32(line?.Split()[0]),
                     CacheCount = Convert.ToInt32(line?.Split()[1]),
                 };
 
-                int count = endpoint.CacheCount;
+                var count = endpoint.CacheCount;
                 endpoint.CacheServers = new Dictionary<int, int>();
                 endpoint.Requests = new Dictionary<int, int>();
 
@@ -62,21 +49,21 @@ namespace StreamingVideos
                 {
                     line = sr.ReadLine();
 
-                    var data = line?.Split().Select(x => Convert.ToInt32(x)).ToList();
+                    var data = line?.Split().Select(int.Parse).ToList();
 
                     endpoint.CacheServers.Add(data[0], data[1]);
 
                     count--;
                 }
 
-                _sv.Endpoints.Add(endpoint);
+                _streamingVideoServiceService.Endpoints.Add(endpoint);
             }
 
             while ((line = sr.ReadLine()) != null)
             {
-                var data = line?.Split().Select(x => Convert.ToInt32(x)).ToList();
+                var data = line?.Split().Select(int.Parse).ToList();
 
-                _sv.Endpoints[data[1]].Requests.TryAdd(data[0], data[2]);
+                _streamingVideoServiceService.Endpoints[data[1]].Requests.Add(data[0], data[2]);
             }
         }   
 

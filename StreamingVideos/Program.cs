@@ -1,34 +1,25 @@
-﻿using Microsoft.Extensions.Configuration;
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace StreamingVideos
 {
-    class Program
+    static class Program
     {
         static void Main(string[] args)
         {
-            string basePath = Environment.GetEnvironmentVariable("BasePath");
-            string dataset = args[0].Trim();
-
-            StreamingVideo sv = new StreamingVideo();
-            Parser dataParser = new Parser(basePath + dataset, sv);
-
+            var sv = new StreamingVideoService();
+            var dataParser = new Parser(@"C:\Programming\BachelorThesis_StreamingVideos\StreamingVideos\Dataset\example.in", sv);
+            
             dataParser.ParseData();
             sv.Compute();
+            LogData(sv);
         }
 
-        static void LogData(StreamingVideo sv)
+        static void LogData(StreamingVideoService sv)
         {
-            foreach (var video in sv.Videos)
-            {
-                Console.WriteLine("Video: " + video.Id + " Size:" + video.Size);
-            }
-
-            foreach (var cache in sv.CacheServers)
-            {
-                Console.WriteLine("Cache: " + cache.Id + " Capacity " + cache.Capacity);
-            }
-
+            sv.Videos.ForEach(x => Console.WriteLine($"Video with id {x.Id} size : {x.Size}"));
+            
             foreach (var endpoint in sv.Endpoints)
             {
                 Console.WriteLine("Endpoint: " + endpoint.Id + " caches:"

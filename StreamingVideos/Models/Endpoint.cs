@@ -1,16 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace StreamingVideos.Models
 {
-    class Endpoint
+    public class Endpoint
     {
         public int Id { get; set; }
+        
         public int LatencyToDataCenter { get; set; }
+        
         public int CacheCount { get; set; }
+        
         public Dictionary<int, int> CacheServers { get; set; }
-
+        
         public Dictionary<int, int> Requests { get; set; }
     }
 }
