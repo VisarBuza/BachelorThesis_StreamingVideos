@@ -9,9 +9,9 @@ namespace StreamingVideos.Models
         public int LatencyToDataCenter { get; set; }
         
         public int CacheCount { get; set; }
-        
-        public Dictionary<int, int> CacheServers { get; set; }
-        
-        public Dictionary<int, int> Requests { get; set; }
+
+        public Dictionary<int, int> CacheServers { get; set; } = new();
+
+        public Dictionary<int, int> Requests { get; set; } = new();
     }
 }

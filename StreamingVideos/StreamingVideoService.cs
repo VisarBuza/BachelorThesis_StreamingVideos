@@ -37,10 +37,26 @@ namespace StreamingVideos
         public void Compute()
         {
             var cacheServers = new List<Video>[NumberOfCaches];
-            
-            
-            
+
             Console.WriteLine("Computing");
+        }
+        
+        public void LogData()
+        {
+            Videos.ForEach(x => Console.WriteLine($"Video with id {x.Id} size : {x.Size}"));
+            
+            foreach (var endpoint in Endpoints)
+            {
+                Console.WriteLine("Endpoint: " + endpoint.Id + " caches:"
+                                  + endpoint.CacheCount + " latency" + endpoint.LatencyToDataCenter);
+
+                foreach (var item in endpoint.CacheServers)
+                {
+                    Console.WriteLine("Cache id :" + item.Key + " cache latency :" + item.Value);
+                }
+            }
+
+            Requests.ForEach(x => Console.WriteLine($"Video {x.Video} is requested by endpoint {x.Endpoint}, {x.RequestNo} times"));
         }
     }
 }
