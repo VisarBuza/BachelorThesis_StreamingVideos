@@ -14,11 +14,12 @@ namespace StreamingVideos
         public int CacheSize { get; set; }
 
         public List<Video> Videos { get; set; } = new ();
-
         public List<Request> Requests { get; set; } = new();
         public List<Endpoint> Endpoints { get; set; } = new();
-        
 
+
+        private readonly Random random = new();
+        
         public void Init(string[] data)
         {
             NumberOfVideos = int.Parse(data[0]);
@@ -28,7 +29,7 @@ namespace StreamingVideos
             CacheSize = int.Parse(data[4]);
         }
 
-        public void InitVideos(IEnumerable<string> input)
+        public void SetVideoSizes(IEnumerable<string> input)
         {
             input.Select((value, index) => new { value, index}).ToList()
                 .ForEach(x => Videos.Add(new Video { Id = x.index, Size = int.Parse(x.value) }));
@@ -36,9 +37,63 @@ namespace StreamingVideos
 
         public void Compute()
         {
-            var cacheServers = new List<Video>[NumberOfCaches];
+            var cacheServers = InitCacheServers();
 
+            var score = CalculateScore(cacheServers);
+            
             Console.WriteLine("Computing");
+        }
+
+        private List<Video>[] InitCacheServers()
+        {
+            var cacheServers = Enumerable.Range(0, NumberOfCaches).Select((_) => new List<Video>()).ToArray();
+
+            foreach (var cache in cacheServers)
+            {
+                var firstVideo = Videos[random.Next(0, Videos.Count)];
+                
+                cache.Add(firstVideo);
+                
+                while (true)
+                {
+                    var video = Videos[random.Next(0, Videos.Count)];
+
+                    if (!cache.Contains(video))
+                    {
+                        cache.Add(video);
+                    }
+
+                    if (cache.Sum(x => x.Size) <= CacheSize) continue;
+                    
+                    cache.Remove(video);
+                    break;
+                }
+            }
+            
+            return cacheServers;
+        }
+        
+        private int CalculateScore(List<Video>[] cacheServers)
+        {
+            var score = 0;
+              
+            foreach (var request in Requests)
+            {
+                var cacheIds = Endpoints[request.Endpoint].CacheServers.Keys.ToArray();
+                foreach (var index in cacheIds)
+                {
+                    if (!cacheServers[index].Contains(Videos[request.Video])) continue;
+                    
+                    if (Endpoints[request.Endpoint].CacheServers[index] < request.LowestLatency)
+                    {
+                        request.LowestLatency = Endpoints[request.Endpoint].CacheServers[index];
+                    }
+                }
+
+                score += request.RequestNo * (Endpoints[request.Endpoint].LatencyToDataCenter - request.LowestLatency);
+            }
+            
+            return score * 1000 / Requests.Select(x => x.RequestNo).Sum();
         }
         
         public void LogData()
