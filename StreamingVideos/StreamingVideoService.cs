@@ -17,6 +17,8 @@ namespace StreamingVideos
         public List<Request> Requests { get; set; } = new();
         public List<Endpoint> Endpoints { get; set; } = new();
 
+        public int AllRequests { get; set; }
+
 
         private readonly Random random = new();
         
@@ -37,52 +39,61 @@ namespace StreamingVideos
 
         public void Compute()
         {
-            var cacheServers = InitCacheServers();
-
-            var score = CalculateScore(cacheServers);
+            var cacheServers = InitialValuation();
+            var currentScore = CalculateScore(cacheServers);
+            var i = 1000000;
             
-            Console.WriteLine("Computing");
+            while (true)
+            {
+                var temp = InitialValuation();
+                var tempScore = CalculateScore(temp);
+
+                if (tempScore > currentScore)
+                {
+                    currentScore = tempScore;
+                    cacheServers = temp;
+                }
+                    
+            
+                if (i-- < 0) break;
+            }
+
+            Console.WriteLine($"Computing {currentScore}");
         }
 
-        private List<Video>[] InitCacheServers()
+        private Dictionary<int, Video>[] InitialValuation()
         {
-            var cacheServers = Enumerable.Range(0, NumberOfCaches).Select((_) => new List<Video>()).ToArray();
+            var cacheServers = Enumerable.Range(0, NumberOfCaches).Select(_ => new Dictionary<int, Video>()).ToArray();
 
             foreach (var cache in cacheServers)
             {
-                var firstVideo = Videos[random.Next(0, Videos.Count)];
-                
-                cache.Add(firstVideo);
-                
+                var index = random.Next(0, Videos.Count);
+                var size = 0;
                 while (true)
                 {
-                    var video = Videos[random.Next(0, Videos.Count)];
-
-                    if (!cache.Contains(video))
-                    {
-                        cache.Add(video);
-                    }
-
-                    if (cache.Sum(x => x.Size) <= CacheSize) continue;
+                    var video = Videos[index % Videos.Count];
+                    size += video.Size;
+                    index++;
                     
-                    cache.Remove(video);
-                    break;
+                    if (size > CacheSize) break;
+                    cache[video.Id] = video;
                 }
             }
             
             return cacheServers;
         }
         
-        private int CalculateScore(List<Video>[] cacheServers)
+        private int CalculateScore(Dictionary<int, Video>[] cacheServers)
         {
             var score = 0;
-              
+            
+           
             foreach (var request in Requests)
             {
                 var cacheIds = Endpoints[request.Endpoint].CacheServers.Keys.ToArray();
                 foreach (var index in cacheIds)
                 {
-                    if (!cacheServers[index].Contains(Videos[request.Video])) continue;
+                    if (!cacheServers[index].ContainsKey(request.Video)) continue;
                     
                     if (Endpoints[request.Endpoint].CacheServers[index] < request.LowestLatency)
                     {
@@ -93,7 +104,7 @@ namespace StreamingVideos
                 score += request.RequestNo * (Endpoints[request.Endpoint].LatencyToDataCenter - request.LowestLatency);
             }
             
-            return score * 1000 / Requests.Select(x => x.RequestNo).Sum();
+            return score * 1000 / AllRequests;
         }
         
         public void LogData()

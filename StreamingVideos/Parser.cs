@@ -20,7 +20,7 @@ namespace StreamingVideos
 
             Console.WriteLine($"Finished parsing the data");
         }
-        
+
         private static void ParseFirstLine(StreamingVideoService streamingVideoService, StreamReader sr)
         {
             var line = sr.ReadLine();
@@ -74,6 +74,8 @@ namespace StreamingVideos
                 streamingVideoService.Requests.Add(request);
                 streamingVideoService.Endpoints[request.Endpoint].Requests[request.Video] = request.RequestNo;
             }
+
+            streamingVideoService.AllRequests = streamingVideoService.Requests.Select(x => x.RequestNo).Sum();
         }
     }
 }
