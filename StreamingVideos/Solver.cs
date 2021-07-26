@@ -10,7 +10,14 @@ namespace StreamingVideos
     {
         private DataModel _dataModel;
         private readonly Dictionary<string, int> _gainCache = new();
+        private readonly List<int> _cacheSizes = new();
         private readonly Random random = new();
+        public string dataset;
+
+        public Solver(string dataset)
+        {
+            this.dataset = dataset;
+        }
 
         public void Init(DataModel dataModel)
         {
@@ -23,21 +30,34 @@ namespace StreamingVideos
             
             var currentScore = CalculateScore(cacheServers);
 
-            Console.WriteLine($"Initial Solution : {currentScore}");
+            Console.WriteLine($"{dataset} Initial Solution : {currentScore}");
             
             var sw = new Stopwatch();
 
             sw.Start();
 
-            while (sw.ElapsedMilliseconds < 30000)
+            while (sw.Elapsed < TimeSpan.FromMinutes(5))
             {
                 var server = GetRandomCache();
-                
-                if (cacheServers[server].Count < 1) continue;
-                
-                var videoToAdd = GetRandomVideo(cacheServers[server]);
-                
+
+                if (cacheServers[server].Count < 1)
+                {
+                    var video = GetRandomVideo(cacheServers[server], _dataModel.CacheCapacity);
+
+                    cacheServers[server].Add(video);
+
+                    _cacheSizes[server] += _dataModel.VideoSizes[video];
+
+                    continue;
+                }
+
                 var videoToRemove = random.Next(0, cacheServers[server].Count);
+
+                var sizeLeft = _cacheSizes[server] - _dataModel.VideoSizes[videoToRemove];
+
+                var videoToAdd = GetRandomVideo(cacheServers[server], sizeLeft);
+
+                if (videoToAdd == -1) continue;
 
                 var latencyGains = LatencyGains(videoToAdd, server);
 
@@ -46,10 +66,12 @@ namespace StreamingVideos
                 if (latencyGains > latencyGainsOfRemovedVideo)
                 {
                     cacheServers[server][videoToRemove] = videoToAdd;
+
+                    _cacheSizes[server] += _dataModel.VideoSizes[videoToAdd] - _dataModel.VideoSizes[videoToRemove];
                 }
             }
 
-            Console.WriteLine($"Final score: {CalculateScore(cacheServers)}");
+            Console.WriteLine($"{dataset} Final score: {CalculateScore(cacheServers)}");
         }
 
         private List<int>[] FillCacheServers()
@@ -74,6 +96,8 @@ namespace StreamingVideos
 
                     cache.Add(index);
                 }
+
+                _cacheSizes.Add(_dataModel.VideoSizes.Where(x => cache.Contains(x)).Sum());
             }
 
             return cacheServers;
@@ -151,10 +175,17 @@ namespace StreamingVideos
             _dataModel.Requests.ForEach(x => Console.WriteLine($"Video {x.Video} is requested by endpoint {x.Endpoint}, {x.RequestNo} times"));
         }
 
-        public int GetRandomVideo(List<int> cache)
+        public int GetRandomVideo(List<int> cache, int maximumSize)
         {
             var videosNotInCache = Enumerable.Range(0, _dataModel.NumVideos).Except(cache).ToList();
-            return videosNotInCache[random.Next(0, videosNotInCache.Count)];
+
+            var availableVideos = _dataModel.VideoSizes.Select((v, i) => new { v, i })
+                .Where(x => x.v <= maximumSize)
+                .Select(x => x.i);
+
+            var videos = videosNotInCache.Intersect(availableVideos).ToList();
+
+            return videos.Count > 0 ? videos[random.Next(0, videos.Count)] : -1;
         }
 
         public int GetRandomCache()

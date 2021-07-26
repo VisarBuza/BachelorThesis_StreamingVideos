@@ -1,15 +1,36 @@
-﻿using System;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using StreamingVideos;
 using StreamingVideos.Models;
 
-var path = @$"C:\Programming\BachelorThesis_StreamingVideos\StreamingVideos\Dataset\{Environment.GetCommandLineArgs()[1]}";
+var paths = new List<string>
+{
+    @$"C:\Programming\BachelorThesis_StreamingVideos\StreamingVideos\Dataset\trending_today.in",
+    @$"C:\Programming\BachelorThesis_StreamingVideos\StreamingVideos\Dataset\me_at_the_zoo.in",
+    @$"C:/Programming/BachelorThesis_StreamingVideos/StreamingVideos/Dataset/videos_worth_spreading.in",
+    @$"C:\Programming\BachelorThesis_StreamingVideos\StreamingVideos\Dataset\kittens.in"
+};
 
-var dataModel = new DataModel();
+var solvers = new List<Solver>
+{
+    new("trending_today.in"),
+    new("me_at_the_zoo.in"),
+    new("videos_worth_spreading"),
+    new("kittens")
+};
 
-Parser.ParseData(path, dataModel);
+var dataModels = new List<DataModel>();
 
-var solver = new Solver();
+for (var i = 0; i < 4; i++)
+{
+    dataModels.Add(new DataModel());
+    
+    Parser.ParseData(paths[i], dataModels[i]);
 
-solver.Init(dataModel);
+    solvers[i].Init(dataModels[i]);
+}
 
-solver.Solve();
+var tasks = solvers.Select(solver => Task.Factory.StartNew(solver.Solve));
+
+await Task.WhenAll(tasks);
