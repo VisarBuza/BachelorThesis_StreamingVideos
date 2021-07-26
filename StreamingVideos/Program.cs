@@ -1,10 +1,15 @@
-﻿using StreamingVideos;
+﻿using System;
+using StreamingVideos;
+using StreamingVideos.Models;
 
-const string path = @"C:\Programming\BachelorThesis_StreamingVideos\StreamingVideos\Dataset\me_at_the_zoo.in";
+var path = @$"C:\Programming\BachelorThesis_StreamingVideos\StreamingVideos\Dataset\{Environment.GetCommandLineArgs()[1]}";
 
-var streamingVideoService = new StreamingVideoService();
+var dataModel = new DataModel();
 
-Parser.ParseData(path, streamingVideoService);
+Parser.ParseData(path, dataModel);
 
-streamingVideoService.Compute();
-streamingVideoService.LogData();
+var solver = new Solver();
+
+solver.Init(dataModel);
+
+solver.Solve();

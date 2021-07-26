@@ -4,60 +4,69 @@ using StreamingVideos.Models;
 using System.Linq;
 
 namespace StreamingVideos
-    {
+{
     public static class Parser
     {
-        public static void ParseData(string file, StreamingVideoService streamingVideoService)
+        public static DataModel ParseData(string file, DataModel dataModel)
         {
             Console.WriteLine($"Parsing {file.Split("\\").Last()}\n");
 
             using var sr = new StreamReader(file);
-            
-            ParseFirstLine(streamingVideoService, sr);
-            ParseVideos(streamingVideoService, sr);
-            ParseEndpoints(streamingVideoService, sr);
-            ParseRequests(streamingVideoService, sr);
+
+            ParseFirstLine(sr, dataModel);
+            ParseVideos(sr, dataModel);
+            ParseEndpoints(sr, dataModel);
+            ParseRequests(sr, dataModel);
 
             Console.WriteLine($"Finished parsing the data");
+
+            return dataModel;
         }
 
-        private static void ParseFirstLine(StreamingVideoService streamingVideoService, StreamReader sr)
+        private static void ParseFirstLine(StreamReader sr, DataModel dataModel)
         {
             var line = sr.ReadLine();
-            streamingVideoService.Init(line?.Split());
+            var data = line!.Split();
+
+            dataModel.NumVideos = int.Parse(data[0]);
+            dataModel.NumEndpoints = int.Parse(data[1]);
+            dataModel.NumRequests = int.Parse(data[2]);
+            dataModel.NumCaches = int.Parse(data[3]);
+            dataModel.CacheCapacity = int.Parse(data[4]);
         }
 
-        private static void ParseVideos(StreamingVideoService streamingVideoService, StreamReader sr)
+        private static void ParseVideos(StreamReader sr, DataModel dataModel)
         {
             var line = sr.ReadLine();
-            streamingVideoService.SetVideoSizes(line?.Split());
+            var data = line!.Split();
+            dataModel.VideoSizes.AddRange(data.Select(int.Parse));
         }
 
-        private static void ParseEndpoints(StreamingVideoService streamingVideoService, StreamReader sr)
+        private static void ParseEndpoints(StreamReader sr, DataModel dataModel)
         {
-            for (var i = 0; i < streamingVideoService.NumberOfEndpoints; i++)
+            for (var i = 0; i < dataModel.NumEndpoints; i++)
             {
                 var line = sr.ReadLine();
 
                 var endpoint = new Endpoint
                 {
                     Id = i,
-                    LatencyToDataCenter = int.Parse(line.Split()[0]),
+                    LatencyToDataCenter = int.Parse(line!.Split()[0]),
                     CacheCount = int.Parse(line.Split()[1]),
                 };
 
                 for (var j = 0; j < endpoint.CacheCount; j++)
                 {
                     line = sr.ReadLine();
-                    var data = line.Split().Select(int.Parse).ToList();
+                    var data = line!.Split().Select(int.Parse).ToList();
                     endpoint.CacheServers.Add(data[0], data[1]);
                 }
 
-                streamingVideoService.Endpoints.Add(endpoint);
+                dataModel.Endpoints.Add(endpoint);
             }
         }
-        
-        private static void ParseRequests(StreamingVideoService streamingVideoService, StreamReader sr)
+
+        private static void ParseRequests(StreamReader sr, DataModel dataModel)
         {
             string line;
             while ((line = sr.ReadLine()) != null)
@@ -68,14 +77,11 @@ namespace StreamingVideos
                     Video = requestData[0],
                     Endpoint = requestData[1],
                     RequestNo = requestData[2],
-                    LowestLatency = streamingVideoService.Endpoints[requestData[1]].LatencyToDataCenter
+                    LowestLatency = dataModel.Endpoints[requestData[1]].LatencyToDataCenter
                 };
 
-                streamingVideoService.Requests.Add(request);
-                streamingVideoService.Endpoints[request.Endpoint].Requests[request.Video] = request.RequestNo;
+                dataModel.Requests.Add(request);
             }
-
-            streamingVideoService.AllRequests = streamingVideoService.Requests.Select(x => x.RequestNo).Sum();
         }
     }
 }
