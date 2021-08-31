@@ -29,6 +29,7 @@ namespace StreamingVideos
             var cacheServers = FillCacheServers();
             
             var currentScore = CalculateScore(cacheServers);
+            var currentSolution = cacheServers;
 
             Console.WriteLine($"{dataset} Initial Solution : {currentScore}");
             
@@ -36,7 +37,9 @@ namespace StreamingVideos
 
             sw.Start();
 
-            while (sw.Elapsed < TimeSpan.FromMinutes(5))
+            var bestScore = currentScore;
+
+            while (sw.Elapsed < TimeSpan.FromMinutes(1))
             {
                 var server = GetRandomCache();
 
@@ -51,59 +54,220 @@ namespace StreamingVideos
                     continue;
                 }
 
-                var videoToRemove = random.Next(0, cacheServers[server].Count);
-
-                var sizeLeft = _cacheSizes[server] - _dataModel.VideoSizes[videoToRemove];
-
-                var videoToAdd = GetRandomVideo(cacheServers[server], sizeLeft);
-
-                if (videoToAdd == -1) continue;
-
-                var latencyGains = LatencyGains(videoToAdd, server);
-
-                var latencyGainsOfRemovedVideo = LatencyGains(cacheServers[server][videoToRemove], server);
+                var number = random.Next(0, 100);
                 
-                if (latencyGains > latencyGainsOfRemovedVideo)
+                if (number > 90)
                 {
-                    cacheServers[server][videoToRemove] = videoToAdd;
+                    SwapRandom(cacheServers);
+                }
+                else if (number > 50)
+                {
+                    SwapOne(cacheServers);
+                }
+                else
+                {
+                    SwapTwo(cacheServers);
+                }
 
-                    _cacheSizes[server] += _dataModel.VideoSizes[videoToAdd] - _dataModel.VideoSizes[videoToRemove];
+                if (sw.Elapsed < TimeSpan.FromSeconds(60) && sw.Elapsed > TimeSpan.FromSeconds(30))
+                {
+                    currentScore = CalculateScore(cacheServers);
+
+                    if (currentScore > bestScore)
+                    {
+                        bestScore = currentScore;
+                        currentSolution = cacheServers;
+                    }
+
+                    cacheServers = FillCacheServers();
+                }
+                else if (sw.Elapsed < TimeSpan.FromMinutes(3) && sw.Elapsed > TimeSpan.FromMinutes(2))
+                {
+                    currentScore = CalculateScore(cacheServers);
+
+                    if (currentScore > bestScore)
+                    {
+                        bestScore = currentScore;
+                        currentSolution = cacheServers;
+                    }
+
+                    cacheServers = FillCacheServers();
                 }
             }
 
-            Console.WriteLine($"{dataset} Final score: {CalculateScore(cacheServers)}");
+            currentScore = CalculateScore(cacheServers);
+
+            if (currentScore > bestScore)
+            {
+                bestScore = currentScore;
+                currentSolution = cacheServers;
+            }
+
+            Console.WriteLine($"{dataset} Final score: {bestScore}");
+
+            foreach (var cache in currentSolution)
+            {
+                var sum = cache.Sum(video => _dataModel.VideoSizes[video]);
+
+                if (sum > _dataModel.CacheCapacity)
+                {
+                    Console.WriteLine($"{dataset} Size " + sum + " Capacity: " + _dataModel.CacheCapacity + " Count: " + cache.Count);
+                }
+            }
         }
 
-        private List<int>[] FillCacheServers()
+        public void SwapRandom(HashSet<int>[] cacheServers)
         {
-            var cacheServers = Enumerable.Range(0, _dataModel.NumCaches).Select(_ => new List<int>()).ToArray();
+            var server = GetRandomCache();
+
+            var videoToRemove = cacheServers[server].ToList()[random.Next(0, cacheServers[server].Count)];
+
+            var videoToAdd = random.Next(0, _dataModel.NumVideos);
+
+            if (cacheServers[server].Contains(videoToAdd)) return;
+
+            var sizeDiff = _dataModel.VideoSizes[videoToAdd] - _dataModel.VideoSizes[videoToRemove];
+
+            if (_cacheSizes[server] + sizeDiff > _dataModel.CacheCapacity) return;
+
+            var latencyGains = LatencyGains(videoToAdd, server);
+
+            var latencyGainsOfRemovedVideo = LatencyGains(videoToRemove, server);
+
+            if (latencyGains > latencyGainsOfRemovedVideo)
+            {
+                cacheServers[server].Remove(videoToRemove);
+                cacheServers[server].Add(videoToAdd);
+                _cacheSizes[server] += sizeDiff;
+            }
+        }
+
+        public void SwapOne(HashSet<int>[] cacheServers)
+        {
+            var cache1 = GetRandomCache();
+            var cache2 = GetRandomCache();
+
+            if (cache1 == cache2) return;
+
+            var firstCacheContents = cacheServers[cache1].Except(cacheServers[cache2]).OrderByDescending(video => LatencyGains(video, cache1)).ToList();
+            var secondCacheContents = cacheServers[cache2].Except(cacheServers[cache1]).OrderByDescending(video => LatencyGains(video, cache2)).ToList();
+
+            if (firstCacheContents.Count < 1 || secondCacheContents.Count < 1) return;
+
+            var worstVideoInCache1 = firstCacheContents.Last();
+            var worstVideoInCache2 = secondCacheContents.Last();
+
+            var cache1AdditionalSize = _dataModel.VideoSizes[worstVideoInCache2] - _dataModel.VideoSizes[worstVideoInCache1];
+            var cache2AdditionalSize = _dataModel.VideoSizes[worstVideoInCache1] - _dataModel.VideoSizes[worstVideoInCache2];
+
+
+            if (_cacheSizes[cache1] + cache1AdditionalSize > _dataModel.CacheCapacity) return;
+            
+            if (_cacheSizes[cache2] + cache2AdditionalSize > _dataModel.CacheCapacity) return;
+
+            var gains = LatencyGains(worstVideoInCache1, cache2) + LatencyGains(worstVideoInCache2, cache1);
+
+            var gainsOfRemoved = LatencyGains(worstVideoInCache1, cache1) + LatencyGains(worstVideoInCache2, cache2);
+
+            if (gains > gainsOfRemoved)
+            {
+                cacheServers[cache1].Remove(worstVideoInCache1);
+                cacheServers[cache1].Add(worstVideoInCache2);
+
+                cacheServers[cache2].Remove(worstVideoInCache2);
+                cacheServers[cache2].Add(worstVideoInCache1);
+
+
+                _cacheSizes[cache1] += cache1AdditionalSize;
+                _cacheSizes[cache2] += cache2AdditionalSize;
+            }
+        }
+
+        public void SwapTwo(HashSet<int>[] cacheServers)
+        {
+            var cache1 = GetRandomCache();
+            var cache2 = GetRandomCache();
+
+            if (cache1 == cache2) return;
+
+            var videos1 = cacheServers[cache1].Except(cacheServers[cache2]).OrderByDescending(x => LatencyGains(x, cache1)).ToList();
+            var videos2 = cacheServers[cache2].Except(cacheServers[cache1]).OrderByDescending(x => LatencyGains(x, cache2)).ToList();
+
+            if (videos1.Count < 2 || videos2.Count < 2) return;
+
+            var video1cache1 = videos1[^2];
+            var video2cache1 = videos1[^1];
+
+            var video1cache2 = videos2[^2];
+            var video2cache2 = videos2[^1];
+
+            var cache1AdditionalSize = _dataModel.VideoSizes[video1cache2] + _dataModel.VideoSizes[video2cache2] -
+                                       _dataModel.VideoSizes[video1cache1] - _dataModel.VideoSizes[video2cache1];
+
+            var cache2AdditionalSize = _dataModel.VideoSizes[video1cache1] + _dataModel.VideoSizes[video2cache1] -
+                                       _dataModel.VideoSizes[video1cache2] - _dataModel.VideoSizes[video2cache2];
+
+            if (_cacheSizes[cache1] + cache1AdditionalSize > _dataModel.CacheCapacity) return;
+            
+            if (_cacheSizes[cache2] + cache2AdditionalSize > _dataModel.CacheCapacity) return;
+
+            var gains = LatencyGains(video1cache1, cache2) + LatencyGains(video2cache1, cache2) +
+                   LatencyGains(video1cache2, cache1) +LatencyGains(video2cache2, cache1);
+
+            var gainsOfRemoved = LatencyGains(video1cache1, cache1) + LatencyGains(video2cache1, cache1) +
+                            LatencyGains(video1cache2, cache2) + LatencyGains(video2cache2, cache2);
+
+            if (gains > gainsOfRemoved)
+            {
+                cacheServers[cache1].Remove(video1cache1);
+                cacheServers[cache1].Remove(video2cache1);
+                cacheServers[cache2].Remove(video1cache2);
+                cacheServers[cache2].Remove(video2cache2);
+
+                cacheServers[cache1].Add(video1cache2);
+                cacheServers[cache1].Add(video2cache2);
+                cacheServers[cache2].Add(video1cache1);
+                cacheServers[cache2].Add(video2cache1);
+
+                _cacheSizes[cache1] += cache1AdditionalSize;
+                _cacheSizes[cache2] += cache2AdditionalSize;
+            }
+        }
+
+        private HashSet<int>[] FillCacheServers()
+        {
+            var cacheServers = Enumerable.Range(0, _dataModel.NumCaches).Select(_ => new HashSet<int>()).ToArray();
+
+            _cacheSizes.Clear();
 
             foreach (var cache in cacheServers)
             {
                 var size = 0;
+
                 while (true)
                 {
                     var index = random.Next(0, _dataModel.NumVideos);
                    
                     var videoSize = _dataModel.VideoSizes[index];
-                    
-                    size += videoSize;
 
-                    if (size > _dataModel.CacheCapacity)
+                    if (size + videoSize > _dataModel.CacheCapacity)
                         break;
 
-                    if (cache.Contains(index)) continue;
+                    if (cache.Contains(index))
+                        continue;
 
                     cache.Add(index);
+
+                    size += videoSize;
                 }
 
-                _cacheSizes.Add(_dataModel.VideoSizes.Where(x => cache.Contains(x)).Sum());
+                _cacheSizes.Add(size);
             }
 
             return cacheServers;
         }
 
-        private long CalculateScore(List<int>[] cacheServers)
+        private long CalculateScore(HashSet<int>[] cacheServers)
         {
             long score = 0;
 
@@ -157,31 +321,13 @@ namespace StreamingVideos
             return score;
         }
 
-        public void LogData()
-        {
-            _dataModel.VideoSizes.ForEach(x => Console.WriteLine($"Video with id {x} size : {x}"));
-
-            foreach (var endpoint in _dataModel.Endpoints)
-            {
-                Console.WriteLine("Endpoint: " + endpoint.Id + " caches:"
-                                  + endpoint.CacheCount + " latency" + endpoint.LatencyToDataCenter);
-
-                foreach (var item in endpoint.CacheServers)
-                {
-                    Console.WriteLine("Cache id :" + item.Key + " cache latency :" + item.Value);
-                }
-            }
-
-            _dataModel.Requests.ForEach(x => Console.WriteLine($"Video {x.Video} is requested by endpoint {x.Endpoint}, {x.RequestNo} times"));
-        }
-
-        public int GetRandomVideo(List<int> cache, int maximumSize)
+        public int GetRandomVideo(HashSet<int> cache, int maximumAllowedSize)
         {
             var videosNotInCache = Enumerable.Range(0, _dataModel.NumVideos).Except(cache).ToList();
 
-            var availableVideos = _dataModel.VideoSizes.Select((v, i) => new { v, i })
-                .Where(x => x.v <= maximumSize)
-                .Select(x => x.i);
+            var availableVideos = _dataModel.VideoSizes.Select((size, id) => new { size, id })
+                .Where(video => video.size <= maximumAllowedSize)
+                .Select(video => video.id);
 
             var videos = videosNotInCache.Intersect(availableVideos).ToList();
 
