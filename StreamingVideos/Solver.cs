@@ -39,7 +39,7 @@ namespace StreamingVideos
 
             var bestScore = currentScore;
 
-            while (sw.Elapsed < TimeSpan.FromMinutes(1))
+            while (sw.Elapsed < TimeSpan.FromMinutes(3))
             {
                 var server = GetRandomCache();
 
@@ -122,13 +122,10 @@ namespace StreamingVideos
 
             var videoToRemove = cacheServers[server].ToList()[random.Next(0, cacheServers[server].Count)];
 
-            var videoToAdd = random.Next(0, _dataModel.NumVideos);
+            var videoToAdd = GetRandomVideo(cacheServers[server],
+                _dataModel.CacheCapacity - _cacheSizes[server] - _dataModel.VideoSizes[videoToRemove]);
 
-            if (cacheServers[server].Contains(videoToAdd)) return;
-
-            var sizeDiff = _dataModel.VideoSizes[videoToAdd] - _dataModel.VideoSizes[videoToRemove];
-
-            if (_cacheSizes[server] + sizeDiff > _dataModel.CacheCapacity) return;
+            if (videoToAdd == -1) return;
 
             var latencyGains = LatencyGains(videoToAdd, server);
 
@@ -138,7 +135,8 @@ namespace StreamingVideos
             {
                 cacheServers[server].Remove(videoToRemove);
                 cacheServers[server].Add(videoToAdd);
-                _cacheSizes[server] += sizeDiff;
+
+                _cacheSizes[server] += _dataModel.VideoSizes[videoToAdd] - _dataModel.VideoSizes[videoToRemove];
             }
         }
 
