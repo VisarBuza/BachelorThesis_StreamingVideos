@@ -27,8 +27,11 @@ for (var i = 0; i < 4; i++)
     dataModels.Add(new DataModel());
     
     Parser.ParseData(paths[i], dataModels[i]);
+}
 
-    solvers[i].Init(dataModels[i]);
+for (var i = 0; i < solvers.Count; i++)
+{
+    solvers[i].Init(dataModels[i % 4]);
 }
 
 var tasks = solvers.Select(solver => Task.Factory.StartNew(solver.Solve));
