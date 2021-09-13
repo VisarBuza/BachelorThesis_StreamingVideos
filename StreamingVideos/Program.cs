@@ -1,8 +1,21 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using StreamingVideos;
 using StreamingVideos.Models;
+
+int time = 3;
+
+try
+{
+    time = int.Parse(args[0]);
+}
+catch (Exception e)
+{
+    Console.WriteLine("No argument given!");
+}
+
 
 var paths = new List<string>
 {
@@ -14,10 +27,10 @@ var paths = new List<string>
 
 var solvers = new List<Solver>
 {
-    new("trending_today.in"),
-    new("me_at_the_zoo.in"),
-    new("videos_worth_spreading.in"),
-    new("kittens.in")
+    new("trending_today", time),
+    new("me_at_the_zoo", time),
+    new("videos_worth_spreading", time),
+    new("kittens", time)
 };
 
 var dataModels = new List<DataModel>();
@@ -31,7 +44,7 @@ for (var i = 0; i < 4; i++)
 
 for (var i = 0; i < solvers.Count; i++)
 {
-    solvers[i].Init(dataModels[i % 4]);
+    solvers[i].Init(dataModels[i]);
 }
 
 var tasks = solvers.Select(solver => Task.Factory.StartNew(solver.Solve));

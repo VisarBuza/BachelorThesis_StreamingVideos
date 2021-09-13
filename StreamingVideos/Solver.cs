@@ -8,19 +8,19 @@ namespace StreamingVideos
 {
     public class Solver
     {
-        private DataModel _dataModel;
-        private readonly Dictionary<string, int> _gainCache = new();
-        private readonly List<int> _cacheSizes = new();
-        private readonly Random random = new();
         private readonly int _time;
-        private int _maxRestarts;
-        public string dataset;
+        private readonly string _dataset;
+        private readonly Random random = new();
+        private readonly List<int> _cacheSizes = new();
+        private readonly Dictionary<string, int> _gainCache = new();
+        
+        private int _iterations;
+        private DataModel _dataModel;
 
-        public Solver(string dataset, int time = 5, int maxRestarts = 6)
+        public Solver(string dataset, int time = 1)
         {
-            this.dataset = dataset;
+            _dataset = dataset;
             _time = time;
-            _maxRestarts = maxRestarts;
         }
 
         public void Init(DataModel dataModel)
@@ -32,17 +32,16 @@ namespace StreamingVideos
         {
             var cacheServers = FillCacheServers();
             var currentScore = CalculateScore(cacheServers);
-            var currentSolution = cacheServers;
 
-            Console.WriteLine($"{dataset} Initial Solution : {currentScore} with time {_time} and max retry {_maxRestarts}");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write($"{_dataset}");
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine($" Initial Solution : {currentScore} with time {_time}\n");
 
             var sw = new Stopwatch();
-
             sw.Start();
 
             var bestScore = currentScore;
-
-            var timer = _time / 20.0 * 60 + 1;
 
             while (sw.Elapsed < TimeSpan.FromMinutes(_time))
             {
@@ -61,21 +60,19 @@ namespace StreamingVideos
                         break;
                 }
 
-                if (sw.Elapsed > TimeSpan.FromSeconds(timer))
-                {
-                    Console.WriteLine("Restart " + dataset);
-                    timer += _time / 20.0 * 60;
-                    _maxRestarts--;
 
+                if (_iterations == GetRestartValue())
+                {
                     currentScore = CalculateScore(cacheServers);
 
                     if (currentScore > bestScore)
                     {
                         bestScore = currentScore;
-                        currentSolution = cacheServers;
                     }
 
                     cacheServers = FillCacheServers();
+
+                    _iterations = 0;
                 }
             }
 
@@ -84,20 +81,14 @@ namespace StreamingVideos
             if (currentScore > bestScore)
             {
                 bestScore = currentScore;
-                currentSolution = cacheServers;
             }
 
-            Console.WriteLine($"{dataset} Final score: {bestScore}");
+            Validator(cacheServers);
 
-            foreach (var cache in currentSolution)
-            {
-                var sum = cache.Sum(video => _dataModel.VideoSizes[video]);
-
-                if (sum > _dataModel.CacheCapacity)
-                {
-                    Console.WriteLine($"{dataset} Size " + sum + " Capacity: " + _dataModel.CacheCapacity + " Count: " + cache.Count);
-                }
-            }
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write($"{_dataset}");
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine($": Final score: {bestScore}\n");
         }
 
         public void SwapRandom(HashSet<int>[] cacheServers)
@@ -109,7 +100,11 @@ namespace StreamingVideos
             var videoToAdd = GetRandomVideo(cacheServers[server],
                 _dataModel.CacheCapacity - _cacheSizes[server] - _dataModel.VideoSizes[videoToRemove]);
 
-            if (videoToAdd == -1) return;
+            if (videoToAdd == -1)
+            {
+                _iterations++;
+                return;
+            };
 
             var latencyGains = LatencyGains(videoToAdd, server);
 
@@ -121,6 +116,7 @@ namespace StreamingVideos
                 cacheServers[server].Add(videoToAdd);
 
                 _cacheSizes[server] += _dataModel.VideoSizes[videoToAdd] - _dataModel.VideoSizes[videoToRemove];
+                _iterations++;
             }
         }
 
@@ -134,7 +130,11 @@ namespace StreamingVideos
             var firstCacheContents = cacheServers[cache1].Except(cacheServers[cache2]).OrderByDescending(video => LatencyGains(video, cache1)).ToList();
             var secondCacheContents = cacheServers[cache2].Except(cacheServers[cache1]).OrderByDescending(video => LatencyGains(video, cache2)).ToList();
 
-            if (firstCacheContents.Count < 1 || secondCacheContents.Count < 1) return;
+            if (firstCacheContents.Count < 1 || secondCacheContents.Count < 1)
+            {
+                _iterations++;
+                return;
+            };
 
             var worstVideoInCache1 = firstCacheContents.Last();
             var worstVideoInCache2 = secondCacheContents.Last();
@@ -143,9 +143,11 @@ namespace StreamingVideos
             var cache2AdditionalSize = _dataModel.VideoSizes[worstVideoInCache1] - _dataModel.VideoSizes[worstVideoInCache2];
 
 
-            if (_cacheSizes[cache1] + cache1AdditionalSize > _dataModel.CacheCapacity) return;
-
-            if (_cacheSizes[cache2] + cache2AdditionalSize > _dataModel.CacheCapacity) return;
+            if (_cacheSizes[cache1] + cache1AdditionalSize > _dataModel.CacheCapacity || _cacheSizes[cache2] + cache2AdditionalSize > _dataModel.CacheCapacity)
+            {
+                _iterations++;
+                return;
+            }
 
             var gains = LatencyGains(worstVideoInCache1, cache2) + LatencyGains(worstVideoInCache2, cache1);
 
@@ -162,6 +164,8 @@ namespace StreamingVideos
 
                 _cacheSizes[cache1] += cache1AdditionalSize;
                 _cacheSizes[cache2] += cache2AdditionalSize;
+
+                _iterations++;
             }
         }
 
@@ -175,7 +179,11 @@ namespace StreamingVideos
             var videos1 = cacheServers[cache1].Except(cacheServers[cache2]).OrderByDescending(x => LatencyGains(x, cache1)).ToList();
             var videos2 = cacheServers[cache2].Except(cacheServers[cache1]).OrderByDescending(x => LatencyGains(x, cache2)).ToList();
 
-            if (videos1.Count < 2 || videos2.Count < 2) return;
+            if (videos1.Count < 2 || videos2.Count < 2)
+            {
+                _iterations++;
+                return;
+            };
 
             var video1cache1 = videos1[^2];
             var video2cache1 = videos1[^1];
@@ -189,12 +197,14 @@ namespace StreamingVideos
             var cache2AdditionalSize = _dataModel.VideoSizes[video1cache1] + _dataModel.VideoSizes[video2cache1] -
                                        _dataModel.VideoSizes[video1cache2] - _dataModel.VideoSizes[video2cache2];
 
-            if (_cacheSizes[cache1] + cache1AdditionalSize > _dataModel.CacheCapacity) return;
-
-            if (_cacheSizes[cache2] + cache2AdditionalSize > _dataModel.CacheCapacity) return;
+            if (_cacheSizes[cache1] + cache1AdditionalSize > _dataModel.CacheCapacity || _cacheSizes[cache2] + cache2AdditionalSize > _dataModel.CacheCapacity)
+            {
+                _iterations++;
+                return;
+            }
 
             var gains = LatencyGains(video1cache1, cache2) + LatencyGains(video2cache1, cache2) +
-                   LatencyGains(video1cache2, cache1) + LatencyGains(video2cache2, cache1);
+                        LatencyGains(video1cache2, cache1) + LatencyGains(video2cache2, cache1);
 
             var gainsOfRemoved = LatencyGains(video1cache1, cache1) + LatencyGains(video2cache1, cache1) +
                             LatencyGains(video1cache2, cache2) + LatencyGains(video2cache2, cache2);
@@ -213,6 +223,7 @@ namespace StreamingVideos
 
                 _cacheSizes[cache1] += cache1AdditionalSize;
                 _cacheSizes[cache2] += cache2AdditionalSize;
+                _iterations++;
             }
         }
 
@@ -274,8 +285,8 @@ namespace StreamingVideos
 
             long totalRequests = _dataModel.Requests.Sum(x => x.RequestNo);
 
-            return score / totalRequests * 1000;
-        }
+            return (long)Math.Floor(score * 1.0 / totalRequests * 1000);
+        }    
 
         public int LatencyGains(int videoId, int cacheId)
         {
@@ -319,6 +330,31 @@ namespace StreamingVideos
         public int GetRandomCache()
         {
             return random.Next(0, _dataModel.NumCaches);
+        }
+
+        public int GetRestartValue()
+        {
+            return _dataset switch
+            {
+                "me_at_the_zoo" => 900000,
+                "videos_worth_spreading" => 600,
+                "trending_today" => 200,
+                "kittens" => 250,
+                _ => 500
+            };
+        }
+
+        private void Validator(HashSet<int>[] servers)
+        {
+            foreach (var server in servers)
+            {
+                var cacheSize = server.Sum(x => _dataModel.VideoSizes[x]);
+
+                if (cacheSize > _dataModel.CacheCapacity)
+                {
+                    Console.WriteLine($"Solution invalidates cache capacity {cacheSize} > {_dataModel.CacheCapacity}"!);
+                }
+            }
         }
     }
 }

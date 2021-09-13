@@ -18,7 +18,7 @@ namespace StreamingVideos
             ParseEndpoints(sr, dataModel);
             ParseRequests(sr, dataModel);
 
-            Console.WriteLine($"Finished parsing the data");
+            Console.WriteLine($"Finished parsing the data\n");
 
             return dataModel;
         }
