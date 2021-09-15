@@ -1,21 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using StreamingVideos;
 using StreamingVideos.Models;
 
-int time = 3;
-
-try
-{
-    time = int.Parse(args[0]);
-}
-catch (Exception e)
-{
-    Console.WriteLine("No argument given!");
-}
-
+var time = args.Length > 0 ? int.Parse(args[0]) : 3;
 
 var paths = new List<string>
 {
